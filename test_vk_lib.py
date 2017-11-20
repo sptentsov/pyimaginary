@@ -4,6 +4,7 @@ from VKIntegrator import VKIntegrator
 import json
 import vk
 
+
 i = VKIntegrator()
 i.update_group_members()
 
