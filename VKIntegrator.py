@@ -16,7 +16,7 @@ class VKIntegrator:
                              , conn
                              )
 
-        # download members of each group using API
+        # download members of each group using VK API
         members = pd.DataFrame()
         for g in groups['group_id']:
             members = members.append(pd.DataFrame({'group_id': g, 'user_id': self.vkp.get_group_members(g)}))
@@ -25,7 +25,11 @@ class VKIntegrator:
         print('uploading groups\' members to sql')
         connection_string = 'mssql+pyodbc://localhost\\SQLEXPRESS/VK?driver=SQL+Server'
         engine = sqlalchemy.create_engine(connection_string)
-        members.to_sql(schema='staging', name='groups_members', con=engine, index=False)
+        members.to_sql(schema='staging', name='groups_members', con=engine, index=False, if_exists='replace')
 
         # write only enters/exits to dbo using SQL sproc
+        print('mergin\' state diff inside SQL')
+        engine.execution_options(autocommit=True).execute('exec VK.discovering.merge_groups')
+
+        print('group members updated')
 
