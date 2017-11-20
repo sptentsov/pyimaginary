@@ -1,11 +1,12 @@
 import urllib.request as ur
 import time
 import vk
+import pwd as pwd
 
 
 class VKParser:
-    ACCESS_TOKEN = 'd34a8da7d34a8da7d34a8da73cd3146f83dd34ad34a8da78944579c9d063c82790d21bf'
-    USER_TOKEN = 'ba21f72eb0ad1598668a7dc245112b6e241f7e2022f99d852717c0fbd75697fe23a3c83bdc5db177450c0'
+    # ACCESS_TOKEN = pwd.ACCESS_TOKEN
+    USER_TOKEN = pwd.USER_TOKEN
 
     def get_group_members(self, group_id):
         session = vk.Session(access_token=self.USER_TOKEN)

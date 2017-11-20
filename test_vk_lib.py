@@ -3,7 +3,26 @@ from VKParser import VKParser
 from VKIntegrator import VKIntegrator
 import json
 import vk
+import pwd as pwd
 
+# session = vk.Session()#access_token=pwd.USER_TOKEN)  # )#
+# vk_api = vk.API(session)
+#
+# z = vk_api.wall.getReposts(owner_id=-144657300, post_id=3886)# user_id=4128662)
+# print(z)
+#
+# exit(0)
+
+#
+# v = VKParser()
+# params = {
+#         'group_id': 144657300
+#         , 'token': pwd.USER_TOKEN
+#     }
+# data = v.make_request(method='groups.Members', params=params)
+# data_str = data.decode('utf-8')
+# print(data_str)
+# exit(0)
 
 i = VKIntegrator()
 i.update_group_members()
@@ -23,11 +42,9 @@ v = VKParser()
 x = v.get_group_members(group_id=10772150)
 print(len(x))
 
-# в браузере
-# https://oauth.vk.com/authorize?client_id=app6218276&scope=wall,offline&redirect_uri=https://oauth.vk.com/blank.html&response_type=token
-# и потом из адресной строки берем токен
 
-session = vk.Session(access_token='ba21f72eb0ad1598668a7dc245112b6e241f7e2022f99d852717c0fbd75697fe23a3c83bdc5db177450c0')
+
+session = vk.Session(access_token=pwd.USER_TOKEN)
 vk_api = vk.API(session)
 
 z = vk_api.users.get(user_id=1)
