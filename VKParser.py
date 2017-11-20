@@ -81,12 +81,14 @@ class VKParser:
         data_from_vk = []
         session = vk.Session(access_token=self.USER_TOKEN)
         vk_api = vk.API(session)
+        result = pd.DataFrame()
 
         # берем по пачке юзеров размером users_block_size, и натравливаем на пачку execute
         for b in range(0, len(users), users_block_size):
             print('loading users groups from VK API. processed', b, 'users of', len(users))
             users_block = users[b:b + users_block_size]
 
+            # выгужаем из ВК данные для блока юзеров
             code = '''
                     var flag = 0;
                     var users = [''' + ' ,'.join(str(u) for u in users_block) + '''];
@@ -102,27 +104,30 @@ class VKParser:
                     }
                     return result;
                 '''
-            data_from_vk += vk_api.execute(code=code)
+            data_from_vk = vk_api.execute(code=code)
 
-        result = pd.DataFrame()
-        for user in data_from_vk:
-            result = result.append(pd.DataFrame(
-                {
-                    'user_id': user['user_id']
-                    , 'is_group': 1
-                    , 'subscribed_on': user['groups']['items']}
-                , columns=['user_id', 'is_group', 'subscribed_on']
-            ))
-            result = result.append(pd.DataFrame(
-                {
-                    'user_id': user['user_id']
-                    , 'is_group': 0
-                    , 'subscribed_on': user['users']['items']}
-                , columns=['user_id', 'is_group', 'subscribed_on']
-            ))
+            # пакуем данные для этого блока юзеров в датафрейм
+            for user in data_from_vk:
+                if not isinstance(user, dict):
+                    continue
+                if 'groups' in user:
+                    result = result.append(pd.DataFrame(
+                        {
+                            'user_id': user['user_id']
+                            , 'is_group': 1
+                            , 'subscribed_on': user['groups']['items']}
+                        , columns=['user_id', 'is_group', 'subscribed_on']
+                    ))
+                if 'users' in user:
+                    result = result.append(pd.DataFrame(
+                        {
+                            'user_id': user['user_id']
+                            , 'is_group': 0
+                            , 'subscribed_on': user['users']['items']}
+                        , columns=['user_id', 'is_group', 'subscribed_on']
+                    ))
 
         return result
-
 
     def make_request(self, method, params):
         data = ur.urlopen(
