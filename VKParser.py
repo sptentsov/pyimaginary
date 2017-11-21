@@ -127,6 +127,36 @@ class VKParser:
                         , columns=['user_id', 'is_group', 'subscribed_on']
                     ))
 
+            # wait to avoid ban
+            time.sleep(0.3)
+
+        return result
+
+    def get_groups_info(self, groups):
+        groups_block_size = 500  # столько за один вызов метода можно вытащить групп
+        execute_block_size = 25
+        session = vk.Session(access_token=self.USER_TOKEN)
+        vk_api = vk.API(session)
+        result = pd.DataFrame()
+
+        for b in range(0, len(groups), groups_block_size):
+            print('loading groups info from VK API. processed', b, 'groups of', len(groups))
+            groups_block = groups[b:b + groups_block_size]
+            data_from_vk = vk_api.groups.getById(
+                group_ids=', '.join(str(g) for g in groups_block)
+                , fields='members_count'
+            )
+
+            for g in data_from_vk:
+                result = result.append(pd.DataFrame(
+                    {
+                        'group_id': [g['gid']]
+                        , 'name': g['name']
+                        , 'screen_name': g['screen_name']
+                        , 'members_count': g.get('members_count', 0)  # banned groups have no count
+                    }
+                    , columns=['group_id', 'name', 'screen_name', 'members_count']
+                ))
         return result
 
     def make_request(self, method, params):

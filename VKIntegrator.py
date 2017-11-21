@@ -3,6 +3,7 @@ import pyodbc
 import pandas as pd
 import sqlalchemy
 
+
 class VKIntegrator:
     def __init__(self):
         self.vkp = VKParser()
@@ -29,7 +30,7 @@ class VKIntegrator:
 
         # write only enters/exits to dbo using SQL sproc
         print('mergin\' state diff inside SQL')
-        engine.execution_options(autocommit=True).execute('exec VK.discovering.merge_groups')
+        engine.execution_options(autocommit=True).execute('exec VK.discovering.merge_groups_members')
 
         print('group members updated')
 
@@ -64,3 +65,31 @@ class VKIntegrator:
             print('block of users_groups uploaded to SQL')
 
         print('update_users_groups finished')
+
+    def update_groups(self):
+        conn = pyodbc.connect(r'Driver={SQL Server};Server=.\SQLEXPRESS;Database=VK;Trusted_Connection=yes;')
+        groups = pd.read_sql('select group_id '
+                             'from dbo.vw_groups  '
+                             'order by users_with_grp desc'
+                             , conn
+                            )
+        groups_list = list(groups['group_id'])
+
+        upload_to_sql_block_size = 2000
+        for b in range(0, len(groups_list), upload_to_sql_block_size):
+            print('Group info block extraction launched. processed', b, 'groups of', len(groups_list))
+            block = groups_list[b:b + upload_to_sql_block_size]
+
+            groups_info = self.vkp.get_groups_info(block)
+
+            # upload users to staging
+            print('uploading block with users_groups to sql')
+            connection_string = 'mssql+pyodbc://localhost\\SQLEXPRESS/VK?driver=SQL+Server'
+            engine = sqlalchemy.create_engine(connection_string)
+            groups_info.to_sql(schema='staging', name='groups', con=engine, index=False, if_exists='replace')
+
+            # write only enters/exits to dbo using SQL sproc
+            print('mergin\' state diff inside SQL')
+            engine.execution_options(autocommit=True).execute('exec VK.discovering.merge_groups')
+
+            print('block of group info uploaded to SQL')
