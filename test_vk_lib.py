@@ -4,9 +4,15 @@ import vk
 import pwd as pwd
 
 
+i = VKIntegrator()
+# i.post_photos(from_group=157268412, to_group=144657300, since_dt='2017-11-29')
+i.post_photos(from_group=157268412, to_group=144657300, since_dt='2017-12-05')
+exit(0)
+
 session = vk.Session(access_token=pwd.USER_TOKEN)
 vk_api = vk.API(session)
-z = vk_api.wall.post(owner_id=-157268412, from_group=1, message='uh')
+# z = vk_api.wall.post(owner_id=-157268412, from_group=1, message='uh oh')
+z = vk_api.photos.getAll(owner_id=-157268412, count=200, photo_sizes=0)#-157268412))
 print(z)
 exit(0)
 

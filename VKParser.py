@@ -7,7 +7,32 @@ import pwd as pwd
 
 class VKParser:
     # ACCESS_TOKEN = pwd.ACCESS_TOKEN
-    USER_TOKEN = pwd.USER_TOKEN
+    def __init__(self):
+        session = vk.Session(access_token=pwd.USER_TOKEN)
+        self.vk_api = vk.API(session)
+
+    def get_photos(self, group_id):
+        # returns array of photos in group: ['-157268412_456239021', '-157268412_456239020', '-157268412_456239019']
+
+        data_from_vk = self.vk_api.photos.getAll(owner_id=-group_id, count=200, photo_sizes=0)
+
+        if data_from_vk[0] > 200:
+            raise ValueError('VK says this group have more than 200 photos, API can get up to 200. Delete some photos.')
+
+        photos = []
+        for i in range(1, len(data_from_vk)):  # skip first element, its count
+            photos.append(str(data_from_vk[i]['owner_id']) + '_' + str(data_from_vk[i]['pid']))
+
+        return photos
+
+    def wall_post(self, owner_id, from_group, attachments, publish_date):
+        self.vk_api.wall.post(
+            owner_id=owner_id
+            , from_group=from_group  # от имени группы
+            , attachments=attachments
+            , publish_date=publish_date
+        )
+
 
     def get_group_members(self, group_id):
         session = vk.Session(access_token=self.USER_TOKEN)
