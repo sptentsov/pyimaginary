@@ -11,17 +11,40 @@ class VKParser:
         session = vk.Session(access_token=pwd.USER_TOKEN)
         self.vk_api = vk.API(session)
 
-    def get_photos(self, group_id):
+    def get_photos(self, source_id, source_album):
         # returns array of photos in group: ['-157268412_456239021', '-157268412_456239020', '-157268412_456239019']
+        current_offset = 0
+        offset_step = 200
+        data_from_vk = []
 
-        data_from_vk = self.vk_api.photos.getAll(owner_id=-group_id, count=200, photo_sizes=0)
+        while True:
+            api_call_result = self.vk_api.photos.getAll(
+                owner_id=source_id
+                , count=offset_step
+                , photo_sizes=0
+                , offset=current_offset
+            )
 
-        if data_from_vk[0] > 200:
-            raise ValueError('VK says this group have more than 200 photos, API can get up to 200. Delete some photos.')
+            data_from_vk += api_call_result[1:len(api_call_result)]  # первый элемент - количество фоток в источнике
 
-        photos = []
-        for i in range(1, len(data_from_vk)):  # skip first element, its count
-            photos.append(str(data_from_vk[i]['owner_id']) + '_' + str(data_from_vk[i]['pid']))
+            print(current_offset, offset_step, api_call_result[0], len(api_call_result))
+            if current_offset + offset_step > api_call_result[0]:
+                # уже вычитали всё. Проверяем, что фоток действительно столько
+                if len(data_from_vk) != api_call_result[0]:
+                    raise ValueError(
+                        'Actual count of photos', len(data_from_vk)
+                        , 'doesnt match count from vk:', api_call_result[0]
+                    )
+                break
+            else:
+                current_offset = current_offset + offset_step
+                time.sleep(0.3)
+
+        photos = [
+            str(photo['owner_id']) + '_' + str(photo['pid'])
+            for photo in data_from_vk
+            if photo['aid'] == source_album
+        ]
 
         return photos
 
@@ -33,11 +56,7 @@ class VKParser:
             , publish_date=publish_date
         )
 
-
     def get_group_members(self, group_id):
-        session = vk.Session(access_token=self.USER_TOKEN)
-        vk_api = vk.API(session)
-
         current_offset = 0
         users_in_group = []
         debug = {'offsets': [], 'counts': [], 'amounts': []}
@@ -61,7 +80,7 @@ class VKParser:
                 }
                 return {"users": members, "count": count, "last_offset": offset-1000};
             '''
-            data_from_vk = vk_api.execute(code=code)
+            data_from_vk = self.vk_api.execute(code=code)
 
             print('scanning group id:', group_id
                   , 'total count told by vk:', data_from_vk['count']
@@ -174,12 +193,10 @@ class VKParser:
 
             for g in data_from_vk:
                 result = result.append(pd.DataFrame(
-                    {
-                        'group_id': [g['gid']]
-                        , 'name': g['name']
-                        , 'screen_name': g['screen_name']
-                        , 'members_count': g.get('members_count', 0)  # banned groups have no count
-                    }
+                    [
+                        g['gid'], g['name'], g['screen_name']
+                        , g.get('members_count', 0)  # banned groups have no count
+                    ]
                     , columns=['group_id', 'name', 'screen_name', 'members_count']
                 ))
         return result
