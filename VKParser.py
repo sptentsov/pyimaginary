@@ -3,6 +3,7 @@ import pandas as pd
 import time
 import vk
 import pwd as pwd
+from requests.exceptions import ReadTimeout
 
 
 class VKParser:
@@ -10,6 +11,15 @@ class VKParser:
     def __init__(self):
         session = vk.Session(access_token=pwd.USER_TOKEN)
         self.vk_api = vk.API(session)
+
+    def get_recent_posts(self, source_id):
+        self.vk_api.wall.get(owner_id=source_id, count=100)
+
+    def get_likes(self):
+        w = self.vk_api.wall.get(type='post', owner_id=-144657300, count=100)
+        a = self.vk_api.likes.getList(type='post', owner_id=-144657300, item_id=4539, count=1000, filter='likes')
+        b = self.vk_api.likes.getList(type='post', owner_id=-144657300, item_id=4539, count=1000, filter='copies')
+        print(a,b)
 
     def get_photos(self, source_id, source_album):
         # returns array of photos in group: ['-157268412_456239021', '-157268412_456239020', '-157268412_456239019']
@@ -80,7 +90,14 @@ class VKParser:
                 }
                 return {"users": members, "count": count, "last_offset": offset-1000};
             '''
-            data_from_vk = self.vk_api.execute(code=code)
+
+            for retry in range(3):
+                try:
+                    data_from_vk = self.vk_api.execute(code=code)
+                    break
+                except ReadTimeout:
+                    print('Read timeout from VK, retry in 3 sec..')
+                    time.sleep(3)
 
             print('scanning group id:', group_id
                   , 'total count told by vk:', data_from_vk['count']
@@ -105,6 +122,7 @@ class VKParser:
                         , 'unique users. Debug info:'
                         , str(debug)
                     )
+                time.sleep(0.3)
                 break
             else:
                 # not all users loaded, try to load next set
@@ -122,9 +140,6 @@ class VKParser:
         # 'subscribed_on' - id того, на что он подписан (группы или страницы)
 
         users_block_size = 25  # количество юзеров, по которым тащим данные за один execute. Сейчас он позволяет 25 запросов
-        data_from_vk = []
-        session = vk.Session(access_token=self.USER_TOKEN)
-        vk_api = vk.API(session)
         result = pd.DataFrame()
 
         # берем по пачке юзеров размером users_block_size, и натравливаем на пачку execute
@@ -148,7 +163,7 @@ class VKParser:
                     }
                     return result;
                 '''
-            data_from_vk = vk_api.execute(code=code)
+            data_from_vk = self.vk_api.execute(code=code)
 
             # пакуем данные для этого блока юзеров в датафрейм
             for user in data_from_vk:
@@ -178,25 +193,23 @@ class VKParser:
 
     def get_groups_info(self, groups):
         groups_block_size = 500  # столько за один вызов метода можно вытащить групп
-        execute_block_size = 25
-        session = vk.Session(access_token=self.USER_TOKEN)
-        vk_api = vk.API(session)
+
         result = pd.DataFrame()
 
         for b in range(0, len(groups), groups_block_size):
             print('loading groups info from VK API. processed', b, 'groups of', len(groups))
             groups_block = groups[b:b + groups_block_size]
-            data_from_vk = vk_api.groups.getById(
+            data_from_vk = self.vk_api.groups.getById(
                 group_ids=', '.join(str(g) for g in groups_block)
                 , fields='members_count'
             )
 
             for g in data_from_vk:
                 result = result.append(pd.DataFrame(
-                    [
+                    [[
                         g['gid'], g['name'], g['screen_name']
                         , g.get('members_count', 0)  # banned groups have no count
-                    ]
+                    ]]
                     , columns=['group_id', 'name', 'screen_name', 'members_count']
                 ))
         return result

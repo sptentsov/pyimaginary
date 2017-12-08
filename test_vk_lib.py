@@ -2,16 +2,43 @@ from VKParser import VKParser
 from VKIntegrator import VKIntegrator
 import vk
 import pwd as pwd
-import time
+
+
+def prepare_e1_data():
+    i = VKIntegrator()
+
+    i.update_group_members(groups=[144657300])  # update imaginary members
+    basic_users = i.get_interesting_users(source_vw='[ext].[e1_vw_basic_users]')  # get imaginary members
+    i.update_users_groups(users=basic_users)  # get groups of imaginary members
+    i.update_groups(max_groups_to_update=20000)  # get group info about received groups
+    # users_groups and groups_info are updated: data for sql of ext 1 is ready
+    i.e1_extend_groups()
+    groups = i.e1_get_extended_groups()
+    i.update_group_members(groups=groups)
+
+
+# prepare_e1_data()
+# exit(0)
+
 
 # v = VKParser()
-# # print(v.get_photos(-271083408)) # 141310358 photo4128662_456239179 157268412
-# # print(v.wall_post(-157268412, 1, 'photo-157268412_456239193', round(time.time()) + 30))
+# x = v.get_likes()
 # exit(0)
-#
-# i = VKIntegrator()
-# i.update_group_members()
+
+
+i = VKIntegrator()
+
+i.scan_walls()
+exit(0)
+
+# i.update_users_groups()
 # exit(0)
+
+# i.update_groups(max_groups_to_update=20000)
+# exit(0)
+
+i.update_group_members()
+exit(0)
 
 i = VKIntegrator()
 # its dangerous, so commented
@@ -21,7 +48,7 @@ i = VKIntegrator()
 # i.post_photos(from_group=157268412, to_group=144657300, since_dt='2017-12-05')
 # i.post_photos(source_id=-157268412, source_album=249129913, to_group=144657300, since_dt='2017-11-24')
 # i.post_photos(source_id=-157268412, source_album=249129913, to_group=144657300, since_dt='2017-11-27')
-i.post_photos(source_id=-157268412, source_album=249129913, to_group=144657300, since_dt='2017-12-03')
+# i.post_photos(source_id=-157268412, source_album=249129913, to_group=144657300, since_dt='2017-12-03')
 exit(0)
 
 session = vk.Session(access_token=pwd.USER_TOKEN)
@@ -31,13 +58,6 @@ z = vk_api.photos.getAll(owner_id=-157268412, count=200, photo_sizes=0)#-1572684
 print(z)
 exit(0)
 
-i = VKIntegrator()
-i.update_groups()
-exit(0)
-
-i = VKIntegrator()
-i.update_users_groups()
-exit(0)
 
 v = VKParser()
 x = v.get_group_members(group_id=10772150)
