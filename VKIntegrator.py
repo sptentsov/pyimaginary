@@ -178,6 +178,8 @@ class VKIntegrator:
         # source_ids - список источников. Либо -group_id, либо user_id
 
         max_post_age_days = 10  # смотрим на все посты за последние max_post_age_days. по более старым инфо не обновляем
+        x_dates_ago = datetime.now().date() - timedelta(days=max_post_age_days)
+        oldest_post_unix_time = time.mktime(x_dates_ago.timetuple())
 
         # если список источников не задан - то берем его из sql вьюхи
         if not source_ids:
@@ -189,11 +191,11 @@ class VKIntegrator:
         # идем по всем стенам
         for source_id in source_ids:
             print('scanning wall of source', source_id)
-            recent_posts = self.vkp.get_recent_posts(source_id, max_post_age_days)
+            recent_posts = self.vkp.get_recent_posts(source_id, oldest_post_unix_time)
 
             # идем по всем постам на стене, собираем лойсы-репосты
             posts_list = list(recent_posts['post_id'])
-            likes_and_reposts = self.vkp.get_likes_and_reposts(source_id, posts_list)
+            likes_and_reposts = self.vkp.get_likes_and_reposts(source_id, posts_list)  # TODO
 
             # складываем посты в базу уже после того, как успешно выгребли все лайки по ним
             # чтобы в случае падения можно было смерджить стэйж на середине и не порушить данные

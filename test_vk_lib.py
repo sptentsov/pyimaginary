@@ -2,6 +2,7 @@ from VKParser import VKParser
 from VKIntegrator import VKIntegrator
 import vk
 import pwd as pwd
+import pandas as pd
 
 
 def prepare_e1_data():
@@ -16,6 +17,11 @@ def prepare_e1_data():
     groups = i.e1_get_extended_groups()
     i.update_group_members(groups=groups)
 
+
+pd.set_option('display.height', 1000)
+pd.set_option('display.max_rows', 500)
+pd.set_option('display.max_columns', 500)
+pd.set_option('display.width', 1000)
 
 # prepare_e1_data()
 # exit(0)

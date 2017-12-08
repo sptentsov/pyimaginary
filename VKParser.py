@@ -1,8 +1,10 @@
 import urllib.request as ur
 import pandas as pd
+import numpy as np
 import time
 import vk
 import pwd as pwd
+from datetime import datetime
 from requests.exceptions import ReadTimeout
 
 
@@ -10,10 +12,66 @@ class VKParser:
     # ACCESS_TOKEN = pwd.ACCESS_TOKEN
     def __init__(self):
         session = vk.Session(access_token=pwd.USER_TOKEN)
-        self.vk_api = vk.API(session)
+        self.vk_api = vk.API(session, v='5.69')
 
-    def get_recent_posts(self, source_id):
-        self.vk_api.wall.get(owner_id=source_id, count=100)
+    def get_recent_posts(self, source_id, oldest_post_unix_time):
+        current_offset = 0
+        offset_step = 100
+        data_from_vk = []
+
+        while True:
+            api_call_result = self.vk_api.wall.get(
+                owner_id=source_id
+                , count=100
+                , offset=current_offset
+            )
+            time.sleep(0.3)  # выжидаем, чтобы со следующего запроса не побаниться
+
+            data_from_vk += api_call_result['items']
+
+            if not data_from_vk:
+                print('received an empty list, stop scanning')
+                break
+
+            if len(data_from_vk) == api_call_result['count']:
+                print('reached the oldest entry in the group, stop scanning')
+                break
+
+            if data_from_vk[-1]['date'] < oldest_post_unix_time:
+                print('reached post with date', data_from_vk[-1]['date'], 'its older than needed')
+                break
+
+            print('not all recent posts got, query again')
+            current_offset = current_offset + offset_step
+
+        cleaned_data = [
+            {
+                'post_id': post['id']
+                , 'comments': post['comments']['count']
+                , 'likes': post['likes']['count']
+                , 'reposts': post['reposts']['count']
+                , 'views': post.get('views', {}).get('count', -1)  # для старых записей просмотры не определены
+                , 'repost_from_source_id_signed': post.get('copy_history', [{}])[0].get('owner_id', 0)
+                , 'repost_from_post_id': post.get('copy_history', [{}])[0].get('id', 0)
+                , 'posted_dt_precise': datetime.fromtimestamp(post['date'])
+            }
+            for post in data_from_vk
+            if post['date'] > oldest_post_unix_time
+        ]
+
+        df = pd.DataFrame(
+            cleaned_data
+            , columns=[
+                'post_id', 'comments', 'likes'
+                , 'reposts', 'views'
+                , 'repost_from_source_id_signed', 'repost_from_post_id', 'posted_dt_precise'
+            ]
+        )
+
+        df.insert(loc=0, column='is_group', value=1 if source_id < 0 else 0)
+        df.insert(loc=0, column='source_id', value=abs(source_id))
+
+        return df
 
     def get_likes(self):
         w = self.vk_api.wall.get(type='post', owner_id=-144657300, count=100)
@@ -35,7 +93,7 @@ class VKParser:
                 , offset=current_offset
             )
 
-            data_from_vk += api_call_result[1:len(api_call_result)]  # первый элемент - количество фоток в источнике
+            data_from_vk += api_call_result[1:]  # первый элемент - количество фоток в источнике
 
             print(current_offset, offset_step, api_call_result[0], len(api_call_result))
             if current_offset + offset_step > api_call_result[0]:
