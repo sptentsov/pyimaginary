@@ -34,8 +34,8 @@ pd.set_option('display.width', 1000)
 
 i = VKIntegrator()
 
-i.scan_walls()
-exit(0)
+# i.scan_walls()
+# exit(0)
 
 # i.update_users_groups()
 # exit(0)
@@ -46,7 +46,7 @@ exit(0)
 i.update_group_members()
 exit(0)
 
-i = VKIntegrator()
+# i = VKIntegrator()
 # its dangerous, so commented
 # alt multiprof: 271083408
 # dark side: -157268412 cached album 249129913
@@ -55,6 +55,7 @@ i = VKIntegrator()
 # i.post_photos(source_id=-157268412, source_album=249129913, to_group=144657300, since_dt='2017-11-24')
 # i.post_photos(source_id=-157268412, source_album=249129913, to_group=144657300, since_dt='2017-11-27')
 # i.post_photos(source_id=-157268412, source_album=249129913, to_group=144657300, since_dt='2017-12-03')
+# i.post_photos(source_id=-157268412, source_album=249129913, to_group=144657300, since_dt='2017-12-09')
 exit(0)
 
 session = vk.Session(access_token=pwd.USER_TOKEN)

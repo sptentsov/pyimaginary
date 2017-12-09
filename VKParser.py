@@ -73,8 +73,8 @@ class VKParser:
 
         return df
 
-    def get_likes(self):
-        w = self.vk_api.wall.get(type='post', owner_id=-144657300, count=100)
+    def get_likes_and_reposts(self, source_id, posts_list):
+        users_block_size = 25  # количество постов за один execute. Сейчас он позволяет 25 запросовя
         a = self.vk_api.likes.getList(type='post', owner_id=-144657300, item_id=4539, count=1000, filter='likes')
         b = self.vk_api.likes.getList(type='post', owner_id=-144657300, item_id=4539, count=1000, filter='copies')
         print(a,b)
@@ -93,15 +93,15 @@ class VKParser:
                 , offset=current_offset
             )
 
-            data_from_vk += api_call_result[1:]  # первый элемент - количество фоток в источнике
+            data_from_vk += api_call_result['items']
 
-            print(current_offset, offset_step, api_call_result[0], len(api_call_result))
-            if current_offset + offset_step > api_call_result[0]:
+            print(current_offset, offset_step, api_call_result['count'], len(api_call_result))
+            if current_offset + offset_step > api_call_result['count']:
                 # уже вычитали всё. Проверяем, что фоток действительно столько
-                if len(data_from_vk) != api_call_result[0]:
+                if len(data_from_vk) != api_call_result['count']:
                     raise ValueError(
                         'Actual count of photos', len(data_from_vk)
-                        , 'doesnt match count from vk:', api_call_result[0]
+                        , 'doesnt match count from vk:', api_call_result['count']
                     )
                 break
             else:
@@ -109,9 +109,9 @@ class VKParser:
                 time.sleep(0.3)
 
         photos = [
-            str(photo['owner_id']) + '_' + str(photo['pid'])
+            str(photo['owner_id']) + '_' + str(photo['id'])
             for photo in data_from_vk
-            if photo['aid'] == source_album
+            if photo['album_id'] == source_album
         ]
 
         return photos
@@ -138,7 +138,7 @@ class VKParser:
                 while(flag == 0)
                 {
                     var resp = API.groups.getMembers({"group_id": ''' + str(group_id) + ''', "offset": offset, "count": "1000"});
-                    members = members + resp.users;
+                    members = members + resp.items;
                     offset = offset + 1000;
                     if ((offset > resp.count) || (offset > ''' + str(current_offset) + ''' + 24000)) 
                     {

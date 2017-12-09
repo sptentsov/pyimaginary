@@ -15,19 +15,9 @@ class VKIntegrator:
     def update_group_members(self, groups=[]):
         # load list of groups to check users, if groups are not passed
         if not groups:
-            conn = pyodbc.connect(r'Driver={SQL Server};Server=.\SQLEXPRESS;Database=VK;Trusted_Connection=yes;')
-            groups_df = pd.read_sql('select group_id '
-                                 'from dict.groups_to_monitor '
-                                 'where is_members_scan_enabled = 1'
-                                 , conn
-                                 )
-            groups = list(groups_df['group_id'])
+            groups = self.dbi.get_default_groups_to_update_members()
 
-        # create sqlalchemy engine to upload data
-        connection_string = 'mssql+pyodbc://localhost\\SQLEXPRESS/VK?driver=SQL+Server'
-        engine = sqlalchemy.create_engine(connection_string)
-        # print truncate SQL staging
-        engine.execution_options(autocommit=True).execute('truncate table VK.staging.groups_members')
+        self.dbi.groups_members_truncate_staging()
 
         counter = 1
         for g in groups:
@@ -45,11 +35,11 @@ class VKIntegrator:
 
             # upload users to staging
             print('uploading group', g, 'members to sql staging')
-            members.to_sql(schema='staging', name='groups_members', con=engine, index=False, if_exists='append')
+            self.dbi.groups_members_add_to_staging(members)
 
         # write only enters/exits to dbo using SQL sproc
         print('mergin\' staging->dbo inside SQL')
-        engine.execution_options(autocommit=True).execute('exec VK.discovering.merge_groups_members')
+        self.dbi.groups_members_merge()
 
         print('group members updated')
 
