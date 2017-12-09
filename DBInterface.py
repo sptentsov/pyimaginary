@@ -53,7 +53,7 @@ class DBInterface:
         self.engine_autocommit.execute('truncate table staging.posts')
 
     def posts_add_to_staging(self, posts):
-        self.upload_dataframe( df=posts, to_schema='staging', to_table='posts', if_exists='append')
+        self.upload_dataframe(df=posts, to_schema='staging', to_table='posts', if_exists='append')
 
     def posts_merge(self):
         pass

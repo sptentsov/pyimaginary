@@ -180,12 +180,13 @@ class VKIntegrator:
 
         # идем по всем стенам
         for source_id in source_ids:
-            print('scanning wall of source', source_id)
+            print('scanning wall posts of source', source_id)
             recent_posts = self.vkp.get_recent_posts(source_id, oldest_post_unix_time)
 
             # идем по всем постам на стене, собираем лойсы-репосты
             posts_list = list(recent_posts['post_id'])
-            likes_and_reposts = self.vkp.get_likes_and_reposts(source_id, posts_list)  # TODO
+            print('scanning likes and reposts for received posts of source', source_id)
+            likes_and_reposts = self.vkp.get_likes_and_reposts(source_id, posts_list)
 
             # складываем посты в базу уже после того, как успешно выгребли все лайки по ним
             # чтобы в случае падения можно было смерджить стэйж на середине и не порушить данные

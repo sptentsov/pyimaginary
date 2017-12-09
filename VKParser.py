@@ -74,10 +74,120 @@ class VKParser:
         return df
 
     def get_likes_and_reposts(self, source_id, posts_list):
-        users_block_size = 25  # количество постов за один execute. Сейчас он позволяет 25 запросовя
-        a = self.vk_api.likes.getList(type='post', owner_id=-144657300, item_id=4539, count=1000, filter='likes')
-        b = self.vk_api.likes.getList(type='post', owner_id=-144657300, item_id=4539, count=1000, filter='copies')
-        print(a,b)
+
+        # вспомогательная функция, которая генерит код для VK execute
+        # posts_block[::-1] инвертируем лист, ибо потом юзаем pop с конца листа, а оффсет задан для перовго элемента
+        # внутри ВК скрипта цикл по постам, в нем цикл по оффсетам количества лойсов/репостов
+        def vk_execute_code(current_offset, posts_block, execute_block_size, _source_id, is_like):
+            return '''
+                    var offset = ''' + str(current_offset) + ''';
+                    var api_call_counter = 0;
+                    var posts = [''' + ','.join(str(u) for u in posts_block[::-1]) + '''];
+                    var post = 0;
+                    var result = [];
+                    var resp = {};
+                    var cnt_likes = 0;
+                    var offset_step = 1000;
+                    var is_first_post = true;
+
+                    while((posts.length > 0) && (api_call_counter < ''' + str(execute_block_size) + '''))
+                    {
+                        post = posts.pop();
+                        if (!is_first_post)
+                            offset = 0;
+                        else
+                            is_first_post = false;
+                        
+                        do
+                        {
+                            resp = API.likes.getList({
+                                "type": "post"
+                                , "owner_id": ''' + str(_source_id) + '''
+                                , "item_id": post
+                                , "offset": offset
+                                , "count": offset_step
+                                , "filter": "''' + 'likes' if is_like else 'copies' + '''"});
+                            api_call_counter = api_call_counter + 1;
+                            
+                            resp = resp + {"post_id": post, "offset": offset};
+                            result.push(resp);
+                            
+                            cnt_likes = resp["count"];
+                            offset = offset + offset_step;
+                        }
+                        while((offset < cnt_likes) && (api_call_counter < ''' + str(execute_block_size) + '''))
+                    }
+                    
+                    if (offset < cnt_likes)
+                        result.push({"non_finished_offset": offset, "non_finished_post": post});
+                    else
+                    {  
+                        if (posts.length == 0)
+                            result.push({"non_finished_offset": -1, "non_finished_post": -1});
+                        else
+                            result.push({"non_finished_offset": 0, "non_finished_post": posts.pop()});
+                    }
+                    return result;
+                '''
+
+        def wall_posts_loop(_source_id, _posts_list, is_like):
+            execute_block_size = 25  # количество постов за один execute. Сейчас он позволяет 25 запросовя
+
+            current_post_index = 0
+            current_offset = 0
+
+            # генерим код на экзекьют 25 постов (больше все равно не влезет)
+            # но может влезть меньше, если лайков много. поэтому пилим цикл в экзекьюте, возвращаем последнее опрошенное
+            while current_post_index < len(_posts_list):
+                print('loading posts from VK API. processed', current_post_index, 'posts of', len(_posts_list))
+                posts_block = _posts_list[current_post_index:current_post_index + execute_block_size]
+
+                code = vk_execute_code(current_offset, posts_block, execute_block_size, _source_id, is_like)
+                data_from_vk = self.vk_api.execute(code=code)
+                time.sleep(0.3)
+
+                result = pd.DataFrame()
+
+                for d in data_from_vk:
+                    # data_from_vk - массив словарей. В них либо инфа по лайкам/репостам, либо инфа на чем остановились
+                    if 'post_id' in d.keys():
+                        # если тут инфа по лайкам/репостам, то дописываем её
+                        post_data = {'is_like': 1 if is_like else 0, 'post_id': d['post_id'], 'items': d['items']}
+                        result = result.append(pd.DataFrame(post_data, columns=['is_like', 'post_id', 'items']))
+                    else:
+                        non_finished_post = d['non_finished_post']
+                        non_finished_offset = d['non_finished_offset']
+
+                result.drop_duplicates(inplace=True)
+                print('  got', result.shape[0], 'likes|reposts in block')
+                # TODO validate actual likes with count field from VK
+
+                if non_finished_post == -1:
+                    current_post_index = current_post_index + execute_block_size
+                    current_offset = 0
+                    print('  block finished, go to next block')
+                else:
+                    current_post_index = _posts_list.index(non_finished_post)
+                    current_offset = non_finished_offset
+                    print('  block is not finished, continue with post_index =', current_post_index, 'offset',
+                          current_offset)
+
+                if current_post_index >= len(_posts_list):
+                    break
+
+            return result
+
+        # b = self.vk_api.likes.getList(type='post', owner_id=-144657300, item_id=4539, count=1000, filter='copies')
+
+        likes_and_reposts = pd.DataFrame()
+
+        # грузим репосты
+        likes_and_reposts = likes_and_reposts.append(wall_posts_loop(source_id, posts_list, is_like=False))
+
+        # грузим лайки
+        likes_and_reposts = likes_and_reposts.append(wall_posts_loop(source_id, posts_list, is_like=True))
+
+        return likes_and_reposts
 
     def get_photos(self, source_id, source_album):
         # returns array of photos in group: ['-157268412_456239021', '-157268412_456239020', '-157268412_456239019']

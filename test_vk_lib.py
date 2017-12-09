@@ -34,8 +34,8 @@ pd.set_option('display.width', 1000)
 
 i = VKIntegrator()
 
-# i.scan_walls()
-# exit(0)
+i.scan_walls()
+exit(0)
 
 # i.update_users_groups()
 # exit(0)
@@ -43,8 +43,8 @@ i = VKIntegrator()
 # i.update_groups(max_groups_to_update=20000)
 # exit(0)
 
-i.update_group_members()
-exit(0)
+# i.update_group_members()
+# exit(0)
 
 # i = VKIntegrator()
 # its dangerous, so commented
