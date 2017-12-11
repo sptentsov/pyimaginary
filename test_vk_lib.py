@@ -34,8 +34,8 @@ pd.set_option('display.width', 1000)
 
 i = VKIntegrator()
 
-i.scan_walls()
-exit(0)
+# i.scan_walls()  # source_ids=[4128662])
+# exit(0)
 
 # i.update_users_groups()
 # exit(0)
@@ -43,8 +43,8 @@ exit(0)
 # i.update_groups(max_groups_to_update=20000)
 # exit(0)
 
-# i.update_group_members()
-# exit(0)
+i.update_group_members()
+exit(0)
 
 # i = VKIntegrator()
 # its dangerous, so commented
@@ -56,6 +56,7 @@ exit(0)
 # i.post_photos(source_id=-157268412, source_album=249129913, to_group=144657300, since_dt='2017-11-27')
 # i.post_photos(source_id=-157268412, source_album=249129913, to_group=144657300, since_dt='2017-12-03')
 # i.post_photos(source_id=-157268412, source_album=249129913, to_group=144657300, since_dt='2017-12-09')
+# i.post_photos(source_id=-157268412, source_album=249129913, to_group=144657300, since_dt='2017-12-12')
 exit(0)
 
 session = vk.Session(access_token=pwd.USER_TOKEN)

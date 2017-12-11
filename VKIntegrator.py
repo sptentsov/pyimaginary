@@ -177,6 +177,7 @@ class VKIntegrator:
 
         # посты в стэйжинг добавляем по мере цикла, мерджим одним заходом. поэтому сначала надо зачистить стэйдж
         self.dbi.posts_truncate_staging()
+        self.dbi.likes_and_reposts_truncate_staging()
 
         # идем по всем стенам
         for source_id in source_ids:

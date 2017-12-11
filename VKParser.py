@@ -68,7 +68,7 @@ class VKParser:
             ]
         )
 
-        df.insert(loc=0, column='is_group', value=1 if source_id < 0 else 0)
+        df.insert(loc=0, column='is_posted_by_group', value=1 if source_id < 0 else 0)
         df.insert(loc=0, column='source_id', value=abs(source_id))
 
         return df
@@ -106,7 +106,7 @@ class VKParser:
                                 , "item_id": post
                                 , "offset": offset
                                 , "count": offset_step
-                                , "filter": "''' + 'likes' if is_like else 'copies' + '''"});
+                                , "filter": "''' + ('likes' if is_like else 'copies') + '''"});
                             api_call_counter = api_call_counter + 1;
                             
                             resp = resp + {"post_id": post, "offset": offset};
@@ -135,42 +135,59 @@ class VKParser:
 
             current_post_index = 0
             current_offset = 0
+            result = pd.DataFrame()
 
             # генерим код на экзекьют 25 постов (больше все равно не влезет)
             # но может влезть меньше, если лайков много. поэтому пилим цикл в экзекьюте, возвращаем последнее опрошенное
             while current_post_index < len(_posts_list):
-                print('loading posts from VK API. processed', current_post_index, 'posts of', len(_posts_list))
+                print(
+                    'loading', 'likes' if is_like else 'reposts', 'from VK API.'
+                    , 'processed', current_post_index, 'posts of', len(_posts_list)
+                )
                 posts_block = _posts_list[current_post_index:current_post_index + execute_block_size]
 
                 code = vk_execute_code(current_offset, posts_block, execute_block_size, _source_id, is_like)
                 data_from_vk = self.vk_api.execute(code=code)
                 time.sleep(0.3)
 
-                result = pd.DataFrame()
-
                 for d in data_from_vk:
                     # data_from_vk - массив словарей. В них либо инфа по лайкам/репостам, либо инфа на чем остановились
                     if 'post_id' in d.keys():
                         # если тут инфа по лайкам/репостам, то дописываем её
-                        post_data = {'is_like': 1 if is_like else 0, 'post_id': d['post_id'], 'items': d['items']}
-                        result = result.append(pd.DataFrame(post_data, columns=['is_like', 'post_id', 'items']))
+                        post_data = {
+                            'is_like': 1 if is_like else 0
+                            , 'actor_id': [abs(i) for i in d['items']]
+                            , 'is_actor_a_user': [1 if i > 0 else 0 for i in d['items']]
+                            , 'target_id': abs(_source_id)
+                            , 'target_post_id': d['post_id']
+                            , 'is_target_a_user': 1 if _source_id > 0 else 0
+                        }
+                        result = result.append(
+                            pd.DataFrame(
+                                post_data
+                                , columns=[
+                                    'is_like', 'actor_id', 'is_actor_a_user'
+                                    , 'target_id', 'target_post_id', 'is_target_a_user'
+                                ]
+                            )
+                        )
                     else:
                         non_finished_post = d['non_finished_post']
                         non_finished_offset = d['non_finished_offset']
 
                 result.drop_duplicates(inplace=True)
-                print('  got', result.shape[0], 'likes|reposts in block')
+                print('  got', result.shape[0], 'likes' if is_like else 'reposts', 'in block')
                 # TODO validate actual likes with count field from VK
 
                 if non_finished_post == -1:
                     current_post_index = current_post_index + execute_block_size
                     current_offset = 0
-                    print('  block finished, go to next block')
+                    # print('  block finished, go to next block')
                 else:
                     current_post_index = _posts_list.index(non_finished_post)
                     current_offset = non_finished_offset
-                    print('  block is not finished, continue with post_index =', current_post_index, 'offset',
-                          current_offset)
+                    # print('  block is not finished, continue with post_index =', current_post_index, 'offset',
+                    #       current_offset)
 
                 if current_post_index >= len(_posts_list):
                     break
