@@ -68,7 +68,7 @@ class VKParser:
             ]
         )
 
-        df.insert(loc=0, column='is_posted_by_group', value=1 if source_id < 0 else 0)
+        df.insert(loc=0, column='is_posted_by_user', value=1 if source_id > 0 else 0)
         df.insert(loc=0, column='source_id', value=abs(source_id))
 
         return df

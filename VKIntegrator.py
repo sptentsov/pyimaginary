@@ -191,8 +191,8 @@ class VKIntegrator:
 
             # складываем посты в базу уже после того, как успешно выгребли все лайки по ним
             # чтобы в случае падения можно было смерджить стэйж на середине и не порушить данные
+            print('loading posts and likes and repost to staging..')
             self.dbi.posts_add_to_staging(recent_posts)
-
             self.dbi.likes_and_reposts_to_staging(likes_and_reposts)
 
         # все данные успешно залиты в sql staging. мерджим их в дбо

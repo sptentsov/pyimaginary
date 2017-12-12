@@ -56,7 +56,7 @@ class DBInterface:
         self.upload_dataframe(df=posts, to_schema='staging', to_table='posts', if_exists='append')
 
     def posts_merge(self):
-        pass
+        self.engine_autocommit.execute('exec discovering.merge_posts')
 
     # ---------------------------------------- likes and reposts ----------------------------------------
     def likes_and_reposts_truncate_staging(self):
@@ -66,4 +66,4 @@ class DBInterface:
         self.upload_dataframe(df=data, to_schema='staging', to_table='likes_and_reposts', if_exists='append')
 
     def likes_and_reposts_merge(self):
-        pass
+        self.engine_autocommit.execute('exec discovering.merge_likes_and_reposts')
