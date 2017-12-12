@@ -392,7 +392,7 @@ class VKParser:
             for g in data_from_vk:
                 result = result.append(pd.DataFrame(
                     [[
-                        g['gid'], g['name'], g['screen_name']
+                        g['id'], g['name'], g['screen_name']
                         , g.get('members_count', 0)  # banned groups have no count
                     ]]
                     , columns=['group_id', 'name', 'screen_name', 'members_count']

@@ -23,8 +23,8 @@ pd.set_option('display.max_rows', 500)
 pd.set_option('display.max_columns', 500)
 pd.set_option('display.width', 1000)
 
-# prepare_e1_data()
-# exit(0)
+prepare_e1_data()
+exit(0)
 
 
 # v = VKParser()
@@ -34,8 +34,8 @@ pd.set_option('display.width', 1000)
 
 i = VKIntegrator()
 
-i.scan_walls(source_ids=[4128662])  # )  #
-exit(0)
+# i.scan_walls(source_ids=[4128662])  # )  #
+# exit(0)
 
 # i.update_users_groups()
 # exit(0)
